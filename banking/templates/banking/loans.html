@@ -1,0 +1,119 @@
+{% extends 'banking/base.html' %}
+
+{% block title %}My Loans - Bank Management System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>My Loans</h2>
+    </div>
+    <div class="col text-end">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#applyLoanModal">
+            Apply for New Loan
+        </button>
+    </div>
+</div>
+
+{% if loans %}
+<div class="row">
+    {% for loan in loans %}
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between">
+                <h5 class="mb-0">
+                    {{ loan.get_loan_type_display }} Loan
+                </h5>
+                <span class="badge 
+                    {% if loan.status == 'A' %}bg-success
+                    {% elif loan.status == 'P' %}bg-warning
+                    {% elif loan.status == 'R' %}bg-danger
+                    {% else %}bg-secondary{% endif %}">
+                    {{ loan.get_status_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Loan #: {{ loan.loan_id }}</h6>
+                <p class="card-text">
+                    <strong>Amount:</strong> ₹{{ loan.amount }}<br>
+                    <strong>Interest Rate:</strong> {{ loan.interest_rate }}%<br>
+                    <strong>Term Period:</strong> {{ loan.term_period }} months<br>
+                    <strong>Application Date:</strong> {{ loan.application_date|date:"F d, Y" }}<br>
+                    <strong>Branch:</strong> {{ loan.branch.name }}<br>
+                    <strong>Linked Account:</strong> {{ loan.linked_account.account_number }}
+                    {% if loan.status == 'A' and loan.approved_by %}
+                    <br><strong>Approved By:</strong> {{ loan.approved_by.user.get_full_name }}
+                    {% endif %}
+                </p>
+                {% if loan.status == 'A' %}
+                <button type="button" class="btn btn-outline-primary btn-sm">Make Payment</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <p>You don't have any loans yet. Click "Apply for New Loan" to get started.</p>
+</div>
+{% endif %}
+
+<!-- Apply for Loan Modal -->
+<div class="modal fade" id="applyLoanModal" tabindex="-1" aria-labelledby="applyLoanModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="applyLoanModalLabel">Apply for Loan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'loans' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="loan-type" class="form-label">Loan Type</label>
+                        <select class="form-select" id="loan-type" name="loan_type" required>
+                            <option value="">Select a loan type</option>
+                            <option value="P">Personal Loan</option>
+                            <option value="H">Home Loan</option>
+                            <option value="A">Auto Loan</option>
+                            <option value="E">Education Loan</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="loan-amount" class="form-label">Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" class="form-control" id="loan-amount" name="amount" step="0.01" min="1000" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="loan-term" class="form-label">Term Period (months)</label>
+                        <input type="number" class="form-control" id="loan-term" name="term_period" min="6" max="360" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="loan-branch" class="form-label">Branch</label>
+                        <select class="form-select" id="loan-branch" name="branch" required>
+                            <option value="">Select branch</option>
+                            {% for branch in branches %}
+                            <option value="{{ branch.id }}">{{ branch.name }} ({{ branch.branch_code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="loan-account" class="form-label">Linked Account</label>
+                        <select class="form-select" id="loan-account" name="account" required>
+                            <option value="">Select account</option>
+                            {% for account in accounts %}
+                            <option value="{{ account.account_number }}">
+                                {{ account.account_number }} ({{ account.get_account_type_display }}) - ₹{{ account.balance }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Application</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends 'banking/base.html' %}
+
+{% block title %}Transactions - Employee Panel{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Transaction History</h2>
+        <p class="text-muted">View all transactions in your branch</p>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'employee_dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">All Transactions</h5>
+            </div>
+            <div class="col-auto">
+                <input type="text" id="transactionSearch" class="form-control form-control-sm" placeholder="Search transactions...">
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0" id="transactionsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Account</th>
+                        <th>Customer</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Processed By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr>
+                        <td>{{ transaction.transaction_id }}</td>
+                        <td>{{ transaction.account.account_number }}</td>
+                        <td>{{ transaction.account.customer.user.first_name }} {{ transaction.account.customer.user.last_name }}</td>
+                        <td>
+                            {% if transaction.transaction_type == 'D' %}
+                            <span class="badge bg-success">Deposit</span>
+                            {% elif transaction.transaction_type == 'W' %}
+                            <span class="badge bg-warning">Withdrawal</span>
+                            {% elif transaction.transaction_type == 'T' %}
+                            <span class="badge bg-info">Transfer</span>
+                            {% endif %}
+                        </td>
+                        <td>${{ transaction.amount }}</td>
+                        <td>{{ transaction.timestamp|date:"M d, Y H:i" }}</td>
+                        <td>{{ transaction.description|default:"N/A" }}</td>
+                        <td>
+                            {% if transaction.processed_by_employee %}
+                            {{ transaction.processed_by_employee.user.first_name }} {{ transaction.processed_by_employee.user.last_name }}
+                            {% else %}
+                            Online/System
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">No transactions found in your branch.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Transaction search functionality
+        const searchInput = document.getElementById('transactionSearch');
+        const table = document.getElementById('transactionsTable');
+        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+        
+        searchInput.addEventListener('keyup', function() {
+            const searchText = searchInput.value.toLowerCase();
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                let found = false;
+                
+                for (let j = 0; j < cells.length; j++) {
+                    const cellText = cells[j].textContent.toLowerCase();
+                    
+                    if (cellText.indexOf(searchText) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (found) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% endblock %} 

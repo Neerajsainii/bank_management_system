@@ -1,0 +1,44 @@
+{% extends 'banking/base.html' %}
+
+{% block title %}My Accounts - Bank Management System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>My Accounts</h2>
+    </div>
+</div>
+
+{% if accounts %}
+<div class="row">
+    {% for account in accounts %}
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between">
+                <h5 class="mb-0">
+                    {{ account.get_account_type_display }} Account
+                </h5>
+                <span class="badge {% if account.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                    {% if account.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Account #: {{ account.account_number }}</h6>
+                <p class="card-text">
+                    <strong>Balance:</strong> ₹{{ account.balance }}<br>
+                    <strong>Interest Rate:</strong> {{ account.interest_rate }}%<br>
+                    <strong>Opened:</strong> {{ account.created_at|date:"F d, Y" }}<br>
+                    <strong>Branch:</strong> {{ account.branch.name }}
+                </p>
+                <a href="{% url 'account_detail' account.account_number %}" class="btn btn-primary">View Details</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <p>You don't have any accounts yet.</p>
+</div>
+{% endif %}
+{% endblock %} 

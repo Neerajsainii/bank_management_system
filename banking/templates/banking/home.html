@@ -1,0 +1,73 @@
+{% extends 'banking/base.html' %}
+
+{% block title %}Home - Bank Management System{% endblock %}
+
+{% block content %}
+<div class="jumbotron bg-light p-5 rounded">
+    <h1 class="display-4">Welcome to Bank Management System</h1>
+    <p class="lead">Your secure banking solution for all financial needs.</p>
+    <hr class="my-4">
+    <p>View your accounts, make transactions, and manage your loans all in one place.</p>
+    {% if not user.is_authenticated %}
+    <a class="btn btn-primary btn-lg" href="{% url 'login' %}" role="button">Login</a>
+    {% endif %}
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Accounts</h5>
+                <p class="card-text">View and manage your savings, current, and fixed deposit accounts.</p>
+                <a href="{% url 'account_list' %}" class="btn btn-primary">View Accounts</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Transactions</h5>
+                <p class="card-text">Deposit, withdraw, or transfer funds between accounts securely.</p>
+                <a href="{% url 'transactions' %}" class="btn btn-primary">View Transactions</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Loans</h5>
+                <p class="card-text">Apply for personal, home, auto, or education loans with competitive rates.</p>
+                <a href="{% url 'loans' %}" class="btn btn-primary">View Loans</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Bank Features</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">Multiple account types</li>
+                            <li class="list-group-item">24/7 online banking</li>
+                            <li class="list-group-item">Secure transactions</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">Quick loan approvals</li>
+                            <li class="list-group-item">Mobile banking</li>
+                            <li class="list-group-item">Competitive interest rates</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

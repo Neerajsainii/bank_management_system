@@ -1,0 +1,358 @@
+{% extends 'banking/base.html' %}
+{% load custom_filters %}
+
+{% block title %}Employees - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Employee Management</h2>
+        <p class="text-muted">View and manage all bank employees</p>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEmployeeModal">
+            <i class="bi bi-plus-lg"></i> New Employee
+        </button>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">All Employees</h5>
+            </div>
+            <div class="col-auto">
+                <input type="text" id="employeeSearch" class="form-control form-control-sm" placeholder="Search employees...">
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0" id="employeesTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Name</th>
+                        <th>Username</th>
+                        <th>Password</th>
+                        <th>Department</th>
+                        <th>Branch</th>
+                        <th>Phone</th>
+                        <th>Salary</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td>{{ employee.employee_id }}</td>
+                        <td>{{ employee.user.first_name }} {{ employee.user.last_name }}</td>
+                        <td>{{ employee.user.username }}</td>
+                        <td>
+                            {% if employee.user.username in temp_passwords %}
+                            <span class="badge bg-info">{{ temp_passwords|get_item:employee.user.username }}</span>
+                            <button class="btn btn-sm btn-outline-secondary" title="Copy" onclick="copyPassword('{{ temp_passwords|get_item:employee.user.username }}')">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                            {% else %}
+                            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#resetPasswordModal{{ employee.id }}">
+                                Reset Password
+                            </button>
+                            {% endif %}
+                        </td>
+                        <td>{{ employee.get_department_display }}</td>
+                        <td>{{ employee.branch.name }}</td>
+                        <td>{{ employee.phone_number }}</td>
+                        <td>${{ employee.salary }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#viewEmployeeModal{{ employee.id }}">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editEmployeeModal{{ employee.id }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteEmployeeModal{{ employee.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4">No employees found. Create your first employee!</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Employee Modal (reusing from dashboard) -->
+<div class="modal fade" id="createEmployeeModal" tabindex="-1" aria-labelledby="createEmployeeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createEmployeeModalLabel">Add New Employee</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'admin_dashboard' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-first-name" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="employee-first-name" name="first_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-last-name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="employee-last-name" name="last_name" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="employee-email" name="email" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-phone" class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="employee-phone" name="phone_number" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-id" class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" id="employee-id" name="employee_id" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-department" class="form-label">Department</label>
+                            <select class="form-select" id="employee-department" name="department" required>
+                                <option value="">Select department</option>
+                                <option value="CS">Customer Service</option>
+                                <option value="LN">Loans</option>
+                                <option value="AC">Accounts</option>
+                                <option value="HR">Human Resources</option>
+                                <option value="IT">Information Technology</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-dob" class="form-label">Date of Birth</label>
+                            <input type="date" class="form-control" id="employee-dob" name="date_of_birth" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-branch" class="form-label">Branch</label>
+                            <select class="form-select" id="employee-branch" name="branch" required>
+                                <option value="">Select branch</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-salary" class="form-label">Salary</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="employee-salary" name="salary" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-supervisor" class="form-label">Supervisor</label>
+                            <select class="form-select" id="employee-supervisor" name="supervisor">
+                                <option value="">Select supervisor (optional)</option>
+                                {% for emp in employees %}
+                                <option value="{{ emp.id }}">{{ emp.user.first_name }} {{ emp.user.last_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="employee-address" class="form-label">Address</label>
+                        <textarea class="form-control" id="employee-address" name="address" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Employee</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for employee in employees %}
+<!-- View Employee Modal -->
+<div class="modal fade" id="viewEmployeeModal{{ employee.id }}" tabindex="-1" aria-labelledby="viewEmployeeModalLabel{{ employee.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewEmployeeModalLabel{{ employee.id }}">Employee Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Personal Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Employee ID:</th>
+                                <td>{{ employee.employee_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Full Name:</th>
+                                <td>{{ employee.user.first_name }} {{ employee.user.last_name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Username:</th>
+                                <td>{{ employee.user.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>Password:</th>
+                                <td>
+                                    {% if employee.user.username in temp_passwords %}
+                                    <span class="badge bg-info">{{ temp_passwords|get_item:employee.user.username }}</span>
+                                    <button class="btn btn-sm btn-outline-secondary" title="Copy" onclick="copyPassword('{{ temp_passwords|get_item:employee.user.username }}')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#resetPasswordModal{{ employee.id }}">
+                                        Reset Password
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Email:</th>
+                                <td>{{ employee.user.email }}</td>
+                            </tr>
+                            <tr>
+                                <th>Phone:</th>
+                                <td>{{ employee.phone_number }}</td>
+                            </tr>
+                            <tr>
+                                <th>Date of Birth:</th>
+                                <td>{{ employee.date_of_birth }}</td>
+                            </tr>
+                            <tr>
+                                <th>Address:</th>
+                                <td>{{ employee.address }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Employment Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Department:</th>
+                                <td>{{ employee.get_department_display }}</td>
+                            </tr>
+                            <tr>
+                                <th>Branch:</th>
+                                <td>{{ employee.branch.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Supervisor:</th>
+                                <td>{% if employee.supervisor %}{{ employee.supervisor.user.first_name }} {{ employee.supervisor.user.last_name }}{% else %}N/A{% endif %}</td>
+                            </tr>
+                            <tr>
+                                <th>Salary:</th>
+                                <td>${{ employee.salary }}</td>
+                            </tr>
+                            <tr>
+                                <th>Date Joined:</th>
+                                <td>{{ employee.date_joined }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPasswordModal{{ employee.id }}" tabindex="-1" aria-labelledby="resetPasswordModalLabel{{ employee.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="resetPasswordModalLabel{{ employee.id }}">Reset Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to reset the password for <strong>{{ employee.user.first_name }} {{ employee.user.last_name }}</strong>?</p>
+                <p>A new temporary password will be generated and displayed.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'admin_dashboard' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="employee_id" value="{{ employee.id }}">
+                    <input type="hidden" name="action" value="reset_password">
+                    <button type="submit" class="btn btn-warning">Reset Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Employee search functionality
+        const searchInput = document.getElementById('employeeSearch');
+        const table = document.getElementById('employeesTable');
+        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+        
+        searchInput.addEventListener('keyup', function() {
+            const searchText = searchInput.value.toLowerCase();
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                let found = false;
+                
+                for (let j = 0; j < cells.length; j++) {
+                    const cellText = cells[j].textContent.toLowerCase();
+                    
+                    if (cellText.indexOf(searchText) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (found) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        });
+    });
+    
+    // Function to copy password to clipboard
+    function copyPassword(password) {
+        navigator.clipboard.writeText(password).then(function() {
+            alert('Password copied to clipboard!');
+        }, function() {
+            alert('Failed to copy password. Please try again.');
+        });
+    }
+</script>
+{% endblock %}
+
+{% endblock %} 

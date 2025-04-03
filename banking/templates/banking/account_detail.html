@@ -1,0 +1,331 @@
+{% extends 'banking/base.html' %}
+
+{% block title %}Account Details - Bank Management System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Account Details</h2>
+        <a href="{% url 'account_list' %}" class="btn btn-secondary btn-sm">Back to Accounts</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Account Information</h5>
+            </div>
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Account #: {{ account.account_number }}</h6>
+                <p class="card-text">
+                    <strong>Type:</strong> {{ account.get_account_type_display }} Account<br>
+                    <strong>Balance:</strong> ${{ account.balance }}<br>
+                    <strong>Interest Rate:</strong> {{ account.interest_rate }}%<br>
+                    <strong>Status:</strong> 
+                    <span class="badge {% if account.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                        {% if account.is_active %}Active{% else %}Inactive{% endif %}
+                    </span><br>
+                    <strong>Opened:</strong> {{ account.created_at|date:"F d, Y" }}<br>
+                    <strong>Branch:</strong> {{ account.branch.name }}<br>
+                    <strong>Branch Code:</strong> {{ account.branch.branch_code }}
+                </p>
+                
+                {% if specific_account %}
+                <hr>
+                <h6 class="card-subtitle mb-2">Specific Account Details</h6>
+                <p class="card-text">
+                    {% if account.account_type == 'S' %}
+                        <strong>Minimum Balance:</strong> ${{ specific_account.min_balance }}<br>
+                        <strong>Monthly Withdrawal Limit:</strong> {{ specific_account.monthly_withdrawal_limit }} transactions
+                    {% elif account.account_type == 'C' %}
+                        <strong>Overdraft Limit:</strong> ${{ specific_account.overdraft_limit }}
+                    {% elif account.account_type == 'F' %}
+                        <strong>Deposit Amount:</strong> ${{ specific_account.deposit_amount }}<br>
+                        <strong>Maturity Amount:</strong> ${{ specific_account.maturity_amount }}<br>
+                        <strong>Term Period:</strong> {{ specific_account.term_period }} months<br>
+                        <strong>Maturity Date:</strong> {{ specific_account.maturity_date|date:"F d, Y" }}<br>
+                        <strong>Premature Withdrawal Penalty:</strong> {{ specific_account.premature_withdrawal_penalty }}%
+                    {% endif %}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#depositModal">
+                        <i class="bi bi-cash-coin me-2"></i>Deposit Funds
+                    </button>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#withdrawalModal" 
+                        {% if account.account_type == 'F' %}disabled{% endif %}>
+                        <i class="bi bi-cash me-2"></i>Withdraw Funds
+                        {% if account.account_type == 'F' %}
+                        <small>(Fixed deposits cannot be withdrawn before maturity)</small>
+                        {% endif %}
+                    </button>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#transferModal"
+                        {% if account.account_type == 'F' %}disabled{% endif %}>
+                        <i class="bi bi-arrow-left-right me-2"></i>Transfer Funds
+                    </button>
+                    
+                    {% if account.account_type == 'S' %}
+                    <hr>
+                    <p class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        This savings account allows up to {{ specific_account.monthly_withdrawal_limit }} withdrawals per month.
+                        Maintaining a minimum balance of ${{ specific_account.min_balance }} is required to avoid service charges.
+                    </p>
+                    {% elif account.account_type == 'C' %}
+                    <hr>
+                    <p class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        This current account has an overdraft limit of ${{ specific_account.overdraft_limit }}.
+                        Overdraft fees may apply when utilizing this feature.
+                    </p>
+                    {% elif account.account_type == 'F' %}
+                    <hr>
+                    <p class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        This fixed deposit will mature on {{ specific_account.maturity_date|date:"F d, Y" }}.
+                        Early withdrawal will incur a penalty of {{ specific_account.premature_withdrawal_penalty }}% of the interest earned.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>Recent Transactions</h5>
+                <div>
+                    <select class="form-select form-select-sm" id="transaction-filter">
+                        <option value="all">All Transactions</option>
+                        <option value="D">Deposits Only</option>
+                        <option value="W">Withdrawals Only</option>
+                        <option value="T">Transfers Only</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if transactions %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Date & Time</th>
+                                <th>Description</th>
+                                <th>Processed By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                            <tr class="transaction-row" data-type="{{ transaction.transaction_type }}">
+                                <td>{{ transaction.transaction_id }}</td>
+                                <td>
+                                    {% if transaction.transaction_type == 'D' %}
+                                    <span class="badge bg-success">Deposit</span>
+                                    {% elif transaction.transaction_type == 'W' %}
+                                    <span class="badge bg-danger">Withdrawal</span>
+                                    {% else %}
+                                    <span class="badge bg-primary">Transfer</span>
+                                    {% endif %}
+                                </td>
+                                <td>${{ transaction.amount }}</td>
+                                <td>{{ transaction.timestamp|date:"F d, Y H:i" }}</td>
+                                <td>{{ transaction.description|default:"-" }}</td>
+                                <td>
+                                    {% if transaction.processed_by_employee %}
+                                    {{ transaction.processed_by_employee.user.first_name }} {{ transaction.processed_by_employee.user.last_name }}
+                                    {% else %}
+                                    Self
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <p>No transactions found for this account.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deposit Modal -->
+<div class="modal fade" id="depositModal" tabindex="-1" aria-labelledby="depositModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="depositModalLabel">Deposit Funds</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="#">
+                    {% csrf_token %}
+                    <input type="hidden" name="transaction_type" value="D">
+                    <div class="mb-3">
+                        <label for="deposit-amount" class="form-label">Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="deposit-amount" name="amount" step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="deposit-description" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="deposit-description" name="description" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="deposit-method" class="form-label">Payment Method</label>
+                        <select class="form-select" id="deposit-method" name="payment_gateway">
+                            <option value="">Cash/Direct Deposit</option>
+                            <option value="credit_card">Credit Card</option>
+                            <option value="debit_card">Debit Card</option>
+                            <option value="paypal">PayPal</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Deposit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Withdrawal Modal -->
+<div class="modal fade" id="withdrawalModal" tabindex="-1" aria-labelledby="withdrawalModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="withdrawalModalLabel">Withdraw Funds</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="#">
+                    {% csrf_token %}
+                    <input type="hidden" name="transaction_type" value="W">
+                    <div class="mb-3">
+                        <label for="withdrawal-amount" class="form-label">Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="withdrawal-amount" name="amount" step="0.01" min="0.01" 
+                                   {% if account.account_type == 'S' %}
+                                   max="{{ account.balance|add:'-'|add:specific_account.min_balance }}"
+                                   {% elif account.account_type == 'C' %}
+                                   max="{{ account.balance|add:specific_account.overdraft_limit }}"
+                                   {% else %}
+                                   max="{{ account.balance }}"
+                                   {% endif %}
+                                   required>
+                        </div>
+                        <small class="text-muted">
+                            Available balance: ${{ account.balance }}
+                            {% if account.account_type == 'S' %}
+                            (Minimum balance: ${{ specific_account.min_balance }})
+                            {% elif account.account_type == 'C' %}
+                            (Overdraft available: ${{ specific_account.overdraft_limit }})
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="withdrawal-description" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="withdrawal-description" name="description" rows="2"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Withdraw</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transfer Modal -->
+<div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="transferModalLabel">Transfer Funds</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="#">
+                    {% csrf_token %}
+                    <input type="hidden" name="transaction_type" value="T">
+                    <div class="mb-3">
+                        <label for="transfer-destination" class="form-label">Destination Account</label>
+                        <input type="text" class="form-control" id="transfer-destination" name="destination_account" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="transfer-amount" class="form-label">Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="transfer-amount" name="amount" step="0.01" min="0.01" 
+                                   {% if account.account_type == 'S' %}
+                                   max="{{ account.balance|add:'-'|add:specific_account.min_balance }}"
+                                   {% elif account.account_type == 'C' %}
+                                   max="{{ account.balance|add:specific_account.overdraft_limit }}"
+                                   {% else %}
+                                   max="{{ account.balance }}"
+                                   {% endif %}
+                                   required>
+                        </div>
+                        <small class="text-muted">
+                            Available balance: ${{ account.balance }}
+                            {% if account.account_type == 'S' %}
+                            (Minimum balance: ${{ specific_account.min_balance }})
+                            {% elif account.account_type == 'C' %}
+                            (Overdraft available: ${{ specific_account.overdraft_limit }})
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="transfer-description" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="transfer-description" name="description" rows="2"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Transfer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Transaction filter functionality
+        const transactionFilter = document.getElementById('transaction-filter');
+        const transactionRows = document.querySelectorAll('.transaction-row');
+        
+        transactionFilter.addEventListener('change', function() {
+            const filterValue = this.value;
+            
+            transactionRows.forEach(row => {
+                const type = row.getAttribute('data-type');
+                
+                if (filterValue === 'all' || filterValue === type) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %} 

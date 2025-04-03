@@ -1,0 +1,276 @@
+{% extends 'banking/base.html' %}
+
+{% block title %}Employee Chat - Bank Management System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: 500px;
+        overflow-y: auto;
+    }
+    
+    .message {
+        margin-bottom: 15px;
+        padding: 10px 15px;
+        border-radius: 18px;
+        max-width: 75%;
+    }
+    
+    .message-sent {
+        background-color: #d1e7ff;
+        margin-left: auto;
+        border-bottom-right-radius: 5px;
+    }
+    
+    .message-received {
+        background-color: #f1f1f1;
+        margin-right: auto;
+        border-bottom-left-radius: 5px;
+    }
+    
+    .message-time {
+        font-size: 0.75rem;
+        color: #777;
+        margin-top: 5px;
+    }
+    
+    .contact-list {
+        height: 500px;
+        overflow-y: auto;
+    }
+    
+    .contact-item.active {
+        background-color: #e9f2ff;
+    }
+    
+    .unread-badge {
+        font-size: 0.7rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Employee Chat</h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'employee_dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Chat</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Contacts</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group contact-list">
+                    {% for contact in branch_employees %}
+                    <a href="#" class="list-group-item list-group-item-action contact-item" data-employee-id="{{ contact.id }}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ contact.user.first_name }} {{ contact.user.last_name }}</h6>
+                                <small class="text-muted">{{ contact.get_department_display }}</small>
+                            </div>
+                            <span class="badge bg-primary unread-badge" id="unread-count-{{ contact.id }}">0</span>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="p-3 text-center text-muted">
+                        No other employees in your branch
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 id="chat-recipient">Select a contact</h5>
+                <span class="badge bg-success" id="online-status">offline</span>
+            </div>
+            <div class="card-body">
+                <div class="chat-container" id="chat-messages">
+                    <div class="text-center text-muted py-5">
+                        <p>Select an employee to start chatting</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <form id="chat-form">
+                    <div class="input-group">
+                        <input type="hidden" id="recipient-id" value="">
+                        <input type="text" class="form-control" id="message-input" placeholder="Type your message..." disabled>
+                        <button type="submit" class="btn btn-primary" id="send-button" disabled>Send</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const chatMessages = document.getElementById('chat-messages');
+        const contactItems = document.querySelectorAll('.contact-item');
+        const sendButton = document.getElementById('send-button');
+        const recipientIdInput = document.getElementById('recipient-id');
+        const chatRecipient = document.getElementById('chat-recipient');
+        
+        // Function to display previous chats for a contact
+        function loadChats(employeeId, employeeName) {
+            // This would typically be an AJAX call to get messages
+            // For demo purposes, we'll just simulate it with placeholder messages
+            chatMessages.innerHTML = '';
+            chatRecipient.textContent = employeeName;
+            
+            // Enable chat input
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            
+            // Set recipient ID
+            recipientIdInput.value = employeeId;
+            
+            // Sample messages (in a real app, these would come from the server)
+            const demoMessages = [
+                { sender: true, message: "Hello, how are you?", time: "10:30 AM" },
+                { sender: false, message: "I'm good, thanks! How about you?", time: "10:32 AM" },
+                { sender: true, message: "Doing well. Can you help me with a customer issue?", time: "10:33 AM" },
+                { sender: false, message: "Sure, what's the problem?", time: "10:35 AM" }
+            ];
+            
+            // Display messages
+            demoMessages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.sender ? 'message-sent' : 'message-received'}`;
+                
+                const messageText = document.createElement('div');
+                messageText.textContent = msg.message;
+                
+                const messageTime = document.createElement('div');
+                messageTime.className = 'message-time';
+                messageTime.textContent = msg.time;
+                
+                messageDiv.appendChild(messageText);
+                messageDiv.appendChild(messageTime);
+                chatMessages.appendChild(messageDiv);
+            });
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Handle contact selection
+        contactItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all contacts
+                contactItems.forEach(contact => {
+                    contact.classList.remove('active');
+                });
+                
+                // Add active class to selected contact
+                this.classList.add('active');
+                
+                // Get employee info
+                const employeeId = this.getAttribute('data-employee-id');
+                const employeeName = this.querySelector('h6').textContent;
+                
+                // Reset unread counter
+                const unreadBadge = document.getElementById(`unread-count-${employeeId}`);
+                unreadBadge.textContent = '0';
+                
+                // Load chats
+                loadChats(employeeId, employeeName);
+            });
+        });
+        
+        // Handle message submission
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const message = messageInput.value.trim();
+            const recipientId = recipientIdInput.value;
+            
+            if (message === '' || recipientId === '') {
+                return;
+            }
+            
+            // Create message element
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message message-sent';
+            
+            const messageText = document.createElement('div');
+            messageText.textContent = message;
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const messageTime = document.createElement('div');
+            messageTime.className = 'message-time';
+            messageTime.textContent = timeString;
+            
+            messageDiv.appendChild(messageText);
+            messageDiv.appendChild(messageTime);
+            chatMessages.appendChild(messageDiv);
+            
+            // Clear input
+            messageInput.value = '';
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // In a real app, you would send an AJAX request to save the message
+            // For example:
+            /*
+            fetch('/api/employee-chats/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    receiver: recipientId,
+                    message: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Message sent successfully');
+            })
+            .catch(error => {
+                console.error('Error sending message:', error);
+            });
+            */
+        });
+        
+        // Function to get CSRF token (used for AJAX POST requests)
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
+{% endblock %} 

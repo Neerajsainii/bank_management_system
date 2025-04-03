@@ -1,0 +1,86 @@
+{% extends 'banking/base.html' %}  <!-- Assuming you have a base template -->
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>Send Money</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'transfer_money' %}">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="sender_account" class="form-label">From Account</label>
+                            <select class="form-select" id="sender_account" name="sender_account" required>
+                                {% if accounts %}
+                                    {% for account in accounts %}
+                                        <option value="{{ account.account_number }}" {% if active_account and account.account_number == active_account.account_number %}selected{% endif %}>
+                                            {{ account.account_number }} ({{ account.get_account_type_display }})
+                                            - Balance: ₹{{ account.balance }}
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="" disabled selected>No accounts available</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="receiver_account" class="form-label">To Account Number</label>
+                            <input type="text" class="form-control" id="receiver_account" name="receiver_account" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Amount (₹)</label>
+                            <input type="number" step="0.01" min="0.01" class="form-control" id="amount" name="amount" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="description" name="description" placeholder="e.g., Dinner payment">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Send Money</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4>Recent Transactions</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for txn in request.user.customer.accounts.first.sent_transactions.all|slice:":5" %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <span>To: {{ txn.receiver.account_number }}</span>
+                                <span class="text-danger">-₹{{ txn.amount }}</span>
+                            </div>
+                            <small class="text-muted">{{ txn.timestamp|date:"M d, Y H:i" }}</small>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">No recent transactions</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="mt-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

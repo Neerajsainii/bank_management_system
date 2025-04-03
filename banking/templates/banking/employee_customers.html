@@ -1,0 +1,274 @@
+{% extends 'banking/base.html' %}
+
+{% block title %}Customers - Employee Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Branch Customers</h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'employee_dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Customers</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="col text-end">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCustomerModal">
+            <i class="bi bi-person-plus"></i> Add New Customer
+        </button>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Search customers..." id="customerSearch">
+            <button class="btn btn-outline-secondary" type="button" id="search-button">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+    </div>
+    <div class="col-md-8 text-end">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary active">All Customers</button>
+            <button type="button" class="btn btn-outline-primary">New Customers</button>
+            <button type="button" class="btn btn-outline-primary">Inactive Accounts</button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">Customer List</h5>
+            </div>
+            <div class="col-auto">
+                <span class="badge bg-primary">{{ customers.count }} customers</span>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Accounts</th>
+                        <th>Loans</th>
+                        <th>Created On</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers %}
+                    <tr>
+                        <td>{{ customer.customer_id }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm me-2 bg-primary rounded-circle">
+                                    <span class="text-white">{{ customer.user.first_name|first }}{{ customer.user.last_name|first }}</span>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">{{ customer.user.first_name }} {{ customer.user.last_name }}</div>
+                                    <div class="small text-muted">{{ customer.user.email }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ customer.phone_number }}</td>
+                        <td>
+                            {% with account_count=customer.accounts.count %}
+                                {% if account_count > 0 %}
+                                <span class="badge bg-success">{{ account_count }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">0</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>
+                            {% with loan_count=customer.loans.count %}
+                                {% if loan_count > 0 %}
+                                <span class="badge bg-info">{{ loan_count }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">0</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>{{ customer.created_at|default:"N/A" }}</td>
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-icon" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#"><i class="bi bi-person-vcard me-2"></i>View Customer</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="bi bi-pencil-square me-2"></i>Edit Customer</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="bi bi-wallet2 me-2"></i>Manage Accounts</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-ban me-2"></i>Deactivate</a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <div class="text-muted">No customers found</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer bg-white">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                <li class="page-item disabled">
+                    <a class="page-link" href="#"><i class="bi bi-chevron-left"></i></a>
+                </li>
+                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item">
+                    <a class="page-link" href="#"><i class="bi bi-chevron-right"></i></a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Create Customer Modal -->
+<div class="modal fade" id="createCustomerModal" tabindex="-1" aria-labelledby="createCustomerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createCustomerModalLabel">Add New Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="#">
+                    {% csrf_token %}
+                    <input type="hidden" name="branch" value="{{ employee.branch.id }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="customer-first-name" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="customer-first-name" name="first_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="customer-last-name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="customer-last-name" name="last_name" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="customer-email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="customer-email" name="email" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="customer-phone" class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="customer-phone" name="phone_number" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="customer-id" class="form-label">Customer ID</label>
+                            <input type="text" class="form-control" id="customer-id" name="customer_id" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="customer-dob" class="form-label">Date of Birth</label>
+                            <input type="date" class="form-control" id="customer-dob" name="date_of_birth" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="customer-address" class="form-label">Address</label>
+                        <textarea class="form-control" id="customer-address" name="address" rows="3" required></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="customer-username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="customer-username" name="username" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="customer-password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="customer-password" name="password" required>
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="create-account" name="create_account">
+                        <label class="form-check-label" for="create-account">
+                            Create a new account for this customer
+                        </label>
+                    </div>
+                    <div id="account-details" class="border p-3 rounded mb-3" style="display: none;">
+                        <h6 class="mb-3">Account Details</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="account-type" class="form-label">Account Type</label>
+                                <select class="form-select" id="account-type" name="account_type">
+                                    <option value="S">Savings Account</option>
+                                    <option value="C">Current Account</option>
+                                    <option value="FD">Fixed Deposit Account</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="initial-deposit" class="form-label">Initial Deposit</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="initial-deposit" name="initial_deposit" step="0.01" min="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Customer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle account details section when checkbox is clicked
+        const createAccountCheckbox = document.getElementById('create-account');
+        const accountDetails = document.getElementById('account-details');
+        
+        createAccountCheckbox.addEventListener('change', function() {
+            accountDetails.style.display = this.checked ? 'block' : 'none';
+        });
+        
+        // Customer search functionality
+        const customerSearch = document.getElementById('customerSearch');
+        const searchButton = document.getElementById('search-button');
+        const customerRows = document.querySelectorAll('tbody tr');
+        
+        function filterCustomers() {
+            const searchTerm = customerSearch.value.toLowerCase();
+            
+            customerRows.forEach(row => {
+                const customerName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                const customerID = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
+                const customerEmail = row.querySelector('.small.text-muted').textContent.toLowerCase();
+                
+                if (customerName.includes(searchTerm) || customerID.includes(searchTerm) || customerEmail.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        searchButton.addEventListener('click', filterCustomers);
+        customerSearch.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                filterCustomers();
+            }
+        });
+    });
+</script>
+{% endblock %} 

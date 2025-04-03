@@ -1,0 +1,282 @@
+{% extends 'banking/base.html' %}
+
+{% block title %}Accounts - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Account Management</h2>
+        <p class="text-muted">View and manage all bank accounts</p>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">All Accounts</h5>
+            </div>
+            <div class="col-auto">
+                <input type="text" id="accountSearch" class="form-control form-control-sm" placeholder="Search accounts...">
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0" id="accountsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Account Number</th>
+                        <th>Customer</th>
+                        <th>Type</th>
+                        <th>Balance</th>
+                        <th>Branch</th>
+                        <th>Status</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for account in accounts %}
+                    <tr>
+                        <td>{{ account.account_number }}</td>
+                        <td>{{ account.customer.user.first_name }} {{ account.customer.user.last_name }}</td>
+                        <td>{{ account.get_account_type_display }}</td>
+                        <td>${{ account.balance }}</td>
+                        <td>{{ account.branch.name }}</td>
+                        <td>
+                            {% if account.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ account.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#viewAccountModal{{ account.id }}">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">No accounts found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% for account in accounts %}
+<!-- View Account Modal -->
+<div class="modal fade" id="viewAccountModal{{ account.id }}" tabindex="-1" aria-labelledby="viewAccountModalLabel{{ account.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewAccountModalLabel{{ account.id }}">Account Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Account Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Account Number:</th>
+                                <td>{{ account.account_number }}</td>
+                            </tr>
+                            <tr>
+                                <th>Type:</th>
+                                <td>{{ account.get_account_type_display }}</td>
+                            </tr>
+                            <tr>
+                                <th>Balance:</th>
+                                <td>${{ account.balance }}</td>
+                            </tr>
+                            <tr>
+                                <th>Interest Rate:</th>
+                                <td>{{ account.interest_rate }}%</td>
+                            </tr>
+                            <tr>
+                                <th>Status:</th>
+                                <td>
+                                    {% if account.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Created At:</th>
+                                <td>{{ account.created_at }}</td>
+                            </tr>
+                            <tr>
+                                <th>Branch:</th>
+                                <td>{{ account.branch.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Created By:</th>
+                                <td>
+                                    {% if account.created_by_employee %}
+                                    {{ account.created_by_employee.user.first_name }} {{ account.created_by_employee.user.last_name }}
+                                    {% else %}
+                                    System
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Customer Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Customer ID:</th>
+                                <td>{{ account.customer.customer_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Name:</th>
+                                <td>{{ account.customer.user.first_name }} {{ account.customer.user.last_name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Email:</th>
+                                <td>{{ account.customer.user.email }}</td>
+                            </tr>
+                            <tr>
+                                <th>Phone:</th>
+                                <td>{{ account.customer.phone_number }}</td>
+                            </tr>
+                        </table>
+                        
+                        <h6 class="mt-4">Account Type Specific Details</h6>
+                        <table class="table table-sm">
+                            {% if account.account_type == 'S' %}
+                            <tr>
+                                <th>Minimum Balance:</th>
+                                <td>${{ account.savingsaccount.min_balance }}</td>
+                            </tr>
+                            <tr>
+                                <th>Monthly Withdrawal Limit:</th>
+                                <td>{{ account.savingsaccount.monthly_withdrawal_limit }}</td>
+                            </tr>
+                            {% elif account.account_type == 'C' %}
+                            <tr>
+                                <th>Overdraft Limit:</th>
+                                <td>${{ account.currentaccount.overdraft_limit }}</td>
+                            </tr>
+                            {% elif account.account_type == 'F' %}
+                            <tr>
+                                <th>Deposit Amount:</th>
+                                <td>${{ account.fixeddepositaccount.deposit_amount }}</td>
+                            </tr>
+                            <tr>
+                                <th>Maturity Amount:</th>
+                                <td>${{ account.fixeddepositaccount.maturity_amount }}</td>
+                            </tr>
+                            <tr>
+                                <th>Maturity Date:</th>
+                                <td>{{ account.fixeddepositaccount.maturity_date }}</td>
+                            </tr>
+                            <tr>
+                                <th>Term Period:</th>
+                                <td>{{ account.fixeddepositaccount.term_period }} months</td>
+                            </tr>
+                            <tr>
+                                <th>Premature Withdrawal Penalty:</th>
+                                <td>{{ account.fixeddepositaccount.premature_withdrawal_penalty }}%</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+                
+                <h6 class="mt-2">Recent Transactions</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in account.transactions.all|slice:":5" %}
+                            <tr>
+                                <td>{{ transaction.transaction_id }}</td>
+                                <td>{{ transaction.get_transaction_type_display }}</td>
+                                <td>${{ transaction.amount }}</td>
+                                <td>{{ transaction.timestamp|date:"M d, Y H:i" }}</td>
+                                <td>{{ transaction.description|default:"N/A" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">No transactions found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Account search functionality
+        const searchInput = document.getElementById('accountSearch');
+        const table = document.getElementById('accountsTable');
+        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+        
+        searchInput.addEventListener('keyup', function() {
+            const searchText = searchInput.value.toLowerCase();
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                let found = false;
+                
+                for (let j = 0; j < cells.length; j++) {
+                    const cellText = cells[j].textContent.toLowerCase();
+                    
+                    if (cellText.indexOf(searchText) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (found) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% endblock %} 

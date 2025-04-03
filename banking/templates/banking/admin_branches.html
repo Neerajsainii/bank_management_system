@@ -1,0 +1,229 @@
+{% extends 'banking/base.html' %}
+
+{% block title %}Branches - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Branch Management</h2>
+        <p class="text-muted">View and manage all bank branches</p>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBranchModal">
+            <i class="bi bi-plus-lg"></i> New Branch
+        </button>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">All Branches</h5>
+            </div>
+            <div class="col-auto">
+                <input type="text" id="branchSearch" class="form-control form-control-sm" placeholder="Search branches...">
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0" id="branchesTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Branch Name</th>
+                        <th>Branch Code</th>
+                        <th>Manager</th>
+                        <th>Phone</th>
+                        <th>Address</th>
+                        <th>Employees</th>
+                        <th>Customers</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for branch in branches %}
+                    <tr>
+                        <td>{{ branch.name }}</td>
+                        <td>{{ branch.branch_code }}</td>
+                        <td>{{ branch.manager }}</td>
+                        <td>{{ branch.phone }}</td>
+                        <td>{{ branch.address }}</td>
+                        <td>{{ branch.employees.count }}</td>
+                        <td>{{ branch.customers.count }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editBranchModal{{ branch.id }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteBranchModal{{ branch.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">No branches found. Create your first branch!</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Branch Modal -->
+<div class="modal fade" id="createBranchModal" tabindex="-1" aria-labelledby="createBranchModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createBranchModalLabel">Create New Branch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'admin_dashboard' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="branch-name" class="form-label">Branch Name</label>
+                        <input type="text" class="form-control" id="branch-name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="branch-code" class="form-label">Branch Code</label>
+                        <input type="text" class="form-control" id="branch-code" name="branch_code" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="branch-address" class="form-label">Address</label>
+                        <textarea class="form-control" id="branch-address" name="address" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="branch-manager" class="form-label">Manager</label>
+                        <input type="text" class="form-control" id="branch-manager" name="manager" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="branch-phone" class="form-label">Phone</label>
+                        <input type="text" class="form-control" id="branch-phone" name="phone" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Branch</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for branch in branches %}
+<!-- Edit Branch Modal -->
+<div class="modal fade" id="editBranchModal{{ branch.id }}" tabindex="-1" aria-labelledby="editBranchModalLabel{{ branch.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editBranchModalLabel{{ branch.id }}">Edit Branch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'admin_dashboard' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="branch_id" value="{{ branch.id }}">
+                    <input type="hidden" name="action" value="edit_branch">
+                    <div class="mb-3">
+                        <label for="edit-branch-name{{ branch.id }}" class="form-label">Branch Name</label>
+                        <input type="text" class="form-control" id="edit-branch-name{{ branch.id }}" name="name" value="{{ branch.name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-branch-code{{ branch.id }}" class="form-label">Branch Code</label>
+                        <input type="text" class="form-control" id="edit-branch-code{{ branch.id }}" name="branch_code" value="{{ branch.branch_code }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-branch-address{{ branch.id }}" class="form-label">Address</label>
+                        <textarea class="form-control" id="edit-branch-address{{ branch.id }}" name="address" rows="3" required>{{ branch.address }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-branch-manager{{ branch.id }}" class="form-label">Manager</label>
+                        <input type="text" class="form-control" id="edit-branch-manager{{ branch.id }}" name="manager" value="{{ branch.manager }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-branch-phone{{ branch.id }}" class="form-label">Phone</label>
+                        <input type="text" class="form-control" id="edit-branch-phone{{ branch.id }}" name="phone" value="{{ branch.phone }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Branch Modal -->
+<div class="modal fade" id="deleteBranchModal{{ branch.id }}" tabindex="-1" aria-labelledby="deleteBranchModalLabel{{ branch.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteBranchModalLabel{{ branch.id }}">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete branch <strong>{{ branch.name }}</strong>?</p>
+                <p class="text-danger">This action cannot be undone. All associated employees, customers, and accounts will be impacted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'admin_dashboard' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="branch_id" value="{{ branch.id }}">
+                    <input type="hidden" name="action" value="delete_branch">
+                    <button type="submit" class="btn btn-danger">Delete Branch</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Branch search functionality
+        const searchInput = document.getElementById('branchSearch');
+        const table = document.getElementById('branchesTable');
+        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+        
+        searchInput.addEventListener('keyup', function() {
+            const searchText = searchInput.value.toLowerCase();
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                let found = false;
+                
+                for (let j = 0; j < cells.length; j++) {
+                    const cellText = cells[j].textContent.toLowerCase();
+                    
+                    if (cellText.indexOf(searchText) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (found) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% endblock %} 

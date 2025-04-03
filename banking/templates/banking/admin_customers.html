@@ -1,0 +1,250 @@
+{% extends 'banking/base.html' %}
+
+{% block title %}Customers - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Customer Management</h2>
+        <p class="text-muted">View and manage all bank customers</p>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">All Customers</h5>
+            </div>
+            <div class="col-auto">
+                <input type="text" id="customerSearch" class="form-control form-control-sm" placeholder="Search customers...">
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0" id="customersTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Customer ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Branch</th>
+                        <th>Accounts</th>
+                        <th>Loans</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers %}
+                    <tr>
+                        <td>{{ customer.customer_id }}</td>
+                        <td>{{ customer.user.first_name }} {{ customer.user.last_name }}</td>
+                        <td>{{ customer.user.email }}</td>
+                        <td>{{ customer.phone_number }}</td>
+                        <td>{{ customer.branch.name }}</td>
+                        <td>{{ customer.accounts.count }}</td>
+                        <td>{{ customer.loans.count }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#viewCustomerModal{{ customer.id }}">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">No customers found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% for customer in customers %}
+<!-- View Customer Modal -->
+<div class="modal fade" id="viewCustomerModal{{ customer.id }}" tabindex="-1" aria-labelledby="viewCustomerModalLabel{{ customer.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewCustomerModalLabel{{ customer.id }}">Customer Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Personal Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Customer ID:</th>
+                                <td>{{ customer.customer_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Full Name:</th>
+                                <td>{{ customer.user.first_name }} {{ customer.user.last_name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Username:</th>
+                                <td>{{ customer.user.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>Email:</th>
+                                <td>{{ customer.user.email }}</td>
+                            </tr>
+                            <tr>
+                                <th>Phone:</th>
+                                <td>{{ customer.phone_number }}</td>
+                            </tr>
+                            <tr>
+                                <th>Date of Birth:</th>
+                                <td>{{ customer.date_of_birth }}</td>
+                            </tr>
+                            <tr>
+                                <th>Address:</th>
+                                <td>{{ customer.address }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Account Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Branch:</th>
+                                <td>{{ customer.branch.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Created By:</th>
+                                <td>
+                                    {% if customer.created_by_employee %}
+                                        {{ customer.created_by_employee.user.first_name }} {{ customer.created_by_employee.user.last_name }} (Employee)
+                                    {% elif customer.created_by_admin %}
+                                        {{ customer.created_by_admin.user.first_name }} {{ customer.created_by_admin.user.last_name }} (Admin)
+                                    {% else %}
+                                        System
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                        
+                        <h6 class="mt-4">Accounts</h6>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Account Number</th>
+                                    <th>Type</th>
+                                    <th>Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for account in customer.accounts.all %}
+                                <tr>
+                                    <td>{{ account.account_number }}</td>
+                                    <td>{{ account.get_account_type_display }}</td>
+                                    <td>${{ account.balance }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No accounts found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        
+                        <h6 class="mt-4">Loans</h6>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Loan ID</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for loan in customer.loans.all %}
+                                <tr>
+                                    <td>{{ loan.loan_id }}</td>
+                                    <td>{{ loan.get_loan_type_display }}</td>
+                                    <td>${{ loan.amount }}</td>
+                                    <td>
+                                        {% if loan.status == 'P' %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% elif loan.status == 'A' %}
+                                            <span class="badge bg-success">Approved</span>
+                                        {% elif loan.status == 'R' %}
+                                            <span class="badge bg-danger">Rejected</span>
+                                        {% elif loan.status == 'C' %}
+                                            <span class="badge bg-secondary">Closed</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No loans found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Customer search functionality
+        const searchInput = document.getElementById('customerSearch');
+        const table = document.getElementById('customersTable');
+        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+        
+        searchInput.addEventListener('keyup', function() {
+            const searchText = searchInput.value.toLowerCase();
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                let found = false;
+                
+                for (let j = 0; j < cells.length; j++) {
+                    const cellText = cells[j].textContent.toLowerCase();
+                    
+                    if (cellText.indexOf(searchText) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (found) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% endblock %} 

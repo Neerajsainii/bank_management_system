@@ -1,0 +1,404 @@
+{% extends 'banking/base.html' %}
+{% load custom_filters %}
+
+{% block title %}Loans - Employee Panel{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Loan Management</h2>
+        <p class="text-muted">View and manage loan applications in your branch</p>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'employee_dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createLoanModal">
+            <i class="bi bi-plus-lg"></i> New Loan Application
+        </button>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">Pending Loan Applications ({{ loans|filter_pending|length }})</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Loan ID</th>
+                        <th>Customer</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Term</th>
+                        <th>Interest</th>
+                        <th>Application Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                    {% if loan.status == 'P' %}
+                    <tr>
+                        <td>{{ loan.loan_id }}</td>
+                        <td>{{ loan.customer.user.first_name }} {{ loan.customer.user.last_name }}</td>
+                        <td>{{ loan.get_loan_type_display }}</td>
+                        <td>${{ loan.amount }}</td>
+                        <td>{{ loan.term_period }} months</td>
+                        <td>{{ loan.interest_rate }}%</td>
+                        <td>{{ loan.application_date|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#viewLoanModal{{ loan.id }}">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <form method="post" action="#" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="loan_id" value="{{ loan.loan_id }}">
+                                    <input type="hidden" name="action" value="approve">
+                                    <button type="submit" class="btn btn-outline-success">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                </form>
+                                <form method="post" action="#" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="loan_id" value="{{ loan.loan_id }}">
+                                    <input type="hidden" name="action" value="reject">
+                                    <button type="submit" class="btn btn-outline-danger">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">No pending loan applications found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">All Loans</h5>
+            </div>
+            <div class="col-auto">
+                <input type="text" id="loanSearch" class="form-control form-control-sm" placeholder="Search loans...">
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0" id="loansTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Loan ID</th>
+                        <th>Customer</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Term</th>
+                        <th>Status</th>
+                        <th>Application Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                    <tr>
+                        <td>{{ loan.loan_id }}</td>
+                        <td>{{ loan.customer.user.first_name }} {{ loan.customer.user.last_name }}</td>
+                        <td>{{ loan.get_loan_type_display }}</td>
+                        <td>${{ loan.amount }}</td>
+                        <td>{{ loan.term_period }} months</td>
+                        <td>
+                            {% if loan.status == 'P' %}
+                            <span class="badge bg-warning">Pending</span>
+                            {% elif loan.status == 'A' %}
+                            <span class="badge bg-success">Approved</span>
+                            {% elif loan.status == 'R' %}
+                            <span class="badge bg-danger">Rejected</span>
+                            {% elif loan.status == 'C' %}
+                            <span class="badge bg-secondary">Closed</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ loan.application_date|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#viewLoanModal{{ loan.id }}">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">No loans found in your branch.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Loan Modal -->
+<div class="modal fade" id="createLoanModal" tabindex="-1" aria-labelledby="createLoanModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createLoanModalLabel">Create New Loan Application</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="#">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="customer" class="form-label">Customer</label>
+                        <select class="form-select" id="customer" name="customer" required>
+                            <option value="">Select customer</option>
+                            {% for customer in employee.branch.customers.all %}
+                            <option value="{{ customer.id }}">{{ customer.user.first_name }} {{ customer.user.last_name }} ({{ customer.customer_id }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="loan-type" class="form-label">Loan Type</label>
+                        <select class="form-select" id="loan-type" name="loan_type" required>
+                            <option value="">Select loan type</option>
+                            <option value="P">Personal Loan</option>
+                            <option value="H">Home Loan</option>
+                            <option value="A">Auto Loan</option>
+                            <option value="E">Education Loan</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">Loan Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="amount" name="amount" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="interest-rate" class="form-label">Interest Rate (%)</label>
+                        <input type="number" class="form-control" id="interest-rate" name="interest_rate" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="term-period" class="form-label">Term Period (months)</label>
+                        <input type="number" class="form-control" id="term-period" name="term_period" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Loan Application</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for loan in loans %}
+<!-- View Loan Modal -->
+<div class="modal fade" id="viewLoanModal{{ loan.id }}" tabindex="-1" aria-labelledby="viewLoanModalLabel{{ loan.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewLoanModalLabel{{ loan.id }}">Loan Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Loan Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Loan ID:</th>
+                                <td>{{ loan.loan_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Type:</th>
+                                <td>{{ loan.get_loan_type_display }}</td>
+                            </tr>
+                            <tr>
+                                <th>Amount:</th>
+                                <td>${{ loan.amount }}</td>
+                            </tr>
+                            <tr>
+                                <th>Interest Rate:</th>
+                                <td>{{ loan.interest_rate }}%</td>
+                            </tr>
+                            <tr>
+                                <th>Term Period:</th>
+                                <td>{{ loan.term_period }} months</td>
+                            </tr>
+                            <tr>
+                                <th>Monthly Payment:</th>
+                                <td>${{ loan.amount|monthly_payment:loan.interest_rate|stringformat:"s"|add:','|add:loan.term_period|stringformat:"s" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Total Payment:</th>
+                                <td>${{ loan.amount|multiply:loan.interest_rate|divide:100|add:loan.amount }}</td>
+                            </tr>
+                            <tr>
+                                <th>Application Date:</th>
+                                <td>{{ loan.application_date }}</td>
+                            </tr>
+                            <tr>
+                                <th>Status:</th>
+                                <td>
+                                    {% if loan.status == 'P' %}
+                                    <span class="badge bg-warning">Pending</span>
+                                    {% elif loan.status == 'A' %}
+                                    <span class="badge bg-success">Approved</span>
+                                    {% elif loan.status == 'R' %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                    {% elif loan.status == 'C' %}
+                                    <span class="badge bg-secondary">Closed</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% if loan.approved_by %}
+                            <tr>
+                                <th>Approved By:</th>
+                                <td>{{ loan.approved_by.user.first_name }} {{ loan.approved_by.user.last_name }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Customer Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Customer ID:</th>
+                                <td>{{ loan.customer.customer_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Name:</th>
+                                <td>{{ loan.customer.user.first_name }} {{ loan.customer.user.last_name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Email:</th>
+                                <td>{{ loan.customer.user.email }}</td>
+                            </tr>
+                            <tr>
+                                <th>Phone:</th>
+                                <td>{{ loan.customer.phone_number }}</td>
+                            </tr>
+                            <tr>
+                                <th>Address:</th>
+                                <td>{{ loan.customer.address }}</td>
+                            </tr>
+                        </table>
+                        
+                        <h6 class="mt-4">Associated Accounts</h6>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Account Number</th>
+                                    <th>Type</th>
+                                    <th>Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for account in loan.customer.accounts.all %}
+                                <tr>
+                                    <td>{{ account.account_number }}</td>
+                                    <td>{{ account.get_account_type_display }}</td>
+                                    <td>${{ account.balance }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No accounts found for this customer</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if loan.status == 'P' %}
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h6>Loan Decision</h6>
+                        <div class="d-flex justify-content-between">
+                            <form method="post" action="#">
+                                {% csrf_token %}
+                                <input type="hidden" name="loan_id" value="{{ loan.loan_id }}">
+                                <input type="hidden" name="action" value="approve">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-lg"></i> Approve Loan
+                                </button>
+                            </form>
+                            <form method="post" action="#">
+                                {% csrf_token %}
+                                <input type="hidden" name="loan_id" value="{{ loan.loan_id }}">
+                                <input type="hidden" name="action" value="reject">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="bi bi-x-lg"></i> Reject Loan
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Loan search functionality
+        const searchInput = document.getElementById('loanSearch');
+        const table = document.getElementById('loansTable');
+        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+        
+        searchInput.addEventListener('keyup', function() {
+            const searchText = searchInput.value.toLowerCase();
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                let found = false;
+                
+                for (let j = 0; j < cells.length; j++) {
+                    const cellText = cells[j].textContent.toLowerCase();
+                    
+                    if (cellText.indexOf(searchText) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (found) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% endblock %} 

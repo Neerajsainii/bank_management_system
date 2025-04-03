@@ -1,0 +1,129 @@
+{% extends 'banking/base.html' %}
+
+{% block title %}Employee Dashboard - Bank Management System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Employee Dashboard</h2>
+        <p class="text-muted">Welcome, {{ employee.user.first_name }} {{ employee.user.last_name }} ({{ employee.get_department_display }})</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Customers</h5>
+                <h2 class="display-4">{{ customers_count }}</h2>
+                <p class="card-text">Total customers in your branch</p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <a href="{% url 'employee_customers' %}" class="btn btn-outline-light btn-sm">View Customers</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Accounts</h5>
+                <h2 class="display-4">{{ accounts_count }}</h2>
+                <p class="card-text">Active accounts in your branch</p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <a href="{% url 'employee_accounts' %}" class="btn btn-outline-light btn-sm">View Accounts</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Loans</h5>
+                <h2 class="display-4">{{ loans_count }}</h2>
+                <p class="card-text">All loans in your branch</p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <a href="{% url 'employee_loans' %}" class="btn btn-outline-light btn-sm">View Loans</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Pending Approvals</h5>
+                <h2 class="display-4">{{ pending_loans }}</h2>
+                <p class="card-text">Loan applications pending approval</p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <a href="{% url 'employee_loans' %}" class="btn btn-outline-light btn-sm">Review Pending</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{% url 'employee_customers' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        Create New Customer Account
+                        <span class="badge bg-primary rounded-pill">
+                            <i class="bi bi-person-plus"></i>
+                        </span>
+                    </a>
+                    <a href="{% url 'employee_transactions' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        Process Transactions
+                        <span class="badge bg-success rounded-pill">
+                            <i class="bi bi-currency-exchange"></i>
+                        </span>
+                    </a>
+                    <a href="{% url 'employee_loans' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        Review Loan Applications
+                        <span class="badge bg-info rounded-pill">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </span>
+                    </a>
+                    <a href="{% url 'employee_chat' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        Employee Chat
+                        <span class="badge bg-primary rounded-pill">
+                            <i class="bi bi-chat-dots"></i>
+                        </span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5>Branch Information</h5>
+            </div>
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">{{ employee.branch.name }}</h6>
+                <p class="card-text">
+                    <strong>Branch Code:</strong> {{ employee.branch.branch_code }}<br>
+                    <strong>Manager:</strong> {{ employee.branch.manager }}<br>
+                    <strong>Phone:</strong> {{ employee.branch.phone }}<br>
+                    <strong>Address:</strong> {{ employee.branch.address }}
+                </p>
+                <hr>
+                <h6 class="mb-3">Your Details</h6>
+                <p class="card-text">
+                    <strong>Employee ID:</strong> {{ employee.employee_id }}<br>
+                    <strong>Department:</strong> {{ employee.get_department_display }}<br>
+                    <strong>Phone:</strong> {{ employee.phone_number }}<br>
+                    <strong>Date Joined:</strong> {{ employee.date_joined|date:"F d, Y" }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

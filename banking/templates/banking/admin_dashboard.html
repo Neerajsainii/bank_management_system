@@ -1,0 +1,276 @@
+{% extends 'banking/base.html' %}
+
+{% block title %}Admin Dashboard - Bank Management System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Admin Dashboard</h2>
+        <p class="text-muted">Welcome, {{ admin.user.first_name }} {{ admin.user.last_name }} ({{ admin.designation }})</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Branches</h5>
+                <h2 class="display-4">{{ branches_count }}</h2>
+                <p class="card-text">Total bank branches</p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <a href="{% url 'admin_branches' %}" class="btn btn-outline-light btn-sm">View Branches</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Employees</h5>
+                <h2 class="display-4">{{ employees_count }}</h2>
+                <p class="card-text">Total bank employees</p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <a href="{% url 'admin_employees' %}" class="btn btn-outline-light btn-sm">View Employees</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Customers</h5>
+                <h2 class="display-4">{{ customers_count }}</h2>
+                <p class="card-text">Total bank customers</p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <a href="{% url 'admin_customers' %}" class="btn btn-outline-light btn-sm">View Customers</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Accounts</h5>
+                <h2 class="display-4">{{ accounts_count }}</h2>
+                <p class="card-text">Total active accounts</p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <a href="{% url 'admin_accounts' %}" class="btn btn-outline-light btn-sm">View Accounts</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Admin Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#createBranchModal">
+                        Create New Branch
+                        <span class="badge bg-primary rounded-pill">
+                            <i class="bi bi-building"></i>
+                        </span>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#createEmployeeModal">
+                        Add New Employee
+                        <span class="badge bg-success rounded-pill">
+                            <i class="bi bi-person-plus"></i>
+                        </span>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        View System Logs
+                        <span class="badge bg-info rounded-pill">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </span>
+                    </a>
+                    <a href="{% url 'employee_chat' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        Employee Communications
+                        <span class="badge bg-primary rounded-pill">
+                            <i class="bi bi-chat-dots"></i>
+                        </span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5>Banking Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body text-center">
+                                <h1 class="display-4 text-primary">{{ loans_count }}</h1>
+                                <h6>Total Loans</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body text-center">
+                                <h1 class="display-4 text-warning">{{ pending_loans }}</h1>
+                                <h6>Pending Approvals</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card border-0 bg-light mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title">Account Types Distribution</h6>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 45%">Savings (45%)</div>
+                        </div>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: 35%">Current (35%)</div>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-info" role="progressbar" style="width: 20%">Fixed Deposit (20%)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Branch Modal -->
+<div class="modal fade" id="createBranchModal" tabindex="-1" aria-labelledby="createBranchModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createBranchModalLabel">Create New Branch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'admin_dashboard' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="branch-name" class="form-label">Branch Name</label>
+                        <input type="text" class="form-control" id="branch-name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="branch-code" class="form-label">Branch Code</label>
+                        <input type="text" class="form-control" id="branch-code" name="branch_code" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="branch-address" class="form-label">Address</label>
+                        <textarea class="form-control" id="branch-address" name="address" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="branch-manager" class="form-label">Manager</label>
+                        <input type="text" class="form-control" id="branch-manager" name="manager" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="branch-phone" class="form-label">Phone</label>
+                        <input type="text" class="form-control" id="branch-phone" name="phone" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Branch</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Employee Modal -->
+<div class="modal fade" id="createEmployeeModal" tabindex="-1" aria-labelledby="createEmployeeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createEmployeeModalLabel">Add New Employee</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'admin_dashboard' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-first-name" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="employee-first-name" name="first_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-last-name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="employee-last-name" name="last_name" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="employee-email" name="email" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-phone" class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="employee-phone" name="phone_number" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-id" class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" id="employee-id" name="employee_id" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-department" class="form-label">Department</label>
+                            <select class="form-select" id="employee-department" name="department" required>
+                                <option value="">Select department</option>
+                                <option value="CS">Customer Service</option>
+                                <option value="LN">Loans</option>
+                                <option value="AC">Accounts</option>
+                                <option value="HR">Human Resources</option>
+                                <option value="IT">Information Technology</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-dob" class="form-label">Date of Birth</label>
+                            <input type="date" class="form-control" id="employee-dob" name="date_of_birth" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-branch" class="form-label">Branch</label>
+                            <select class="form-select" id="employee-branch" name="branch" required>
+                                <option value="">Select branch</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-salary" class="form-label">Salary</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="employee-salary" name="salary" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="employee-supervisor" class="form-label">Supervisor</label>
+                            <select class="form-select" id="employee-supervisor" name="supervisor">
+                                <option value="">Select supervisor (optional)</option>
+                                {% for employee in employees %}
+                                <option value="{{ employee.id }}">{{ employee.user.first_name }} {{ employee.user.last_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="employee-address" class="form-label">Address</label>
+                        <textarea class="form-control" id="employee-address" name="address" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Employee</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

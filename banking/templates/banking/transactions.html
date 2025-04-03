@@ -1,0 +1,35 @@
+{% extends 'banking/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Transaction History</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Date</th>
+                <th>Sender</th>
+                <th>Receiver</th>
+                <th>Amount</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for txn in transactions %}
+            <tr>
+                <td>{{ txn.transaction_id }}</td>
+                <td>{{ txn.timestamp }}</td>
+                <td>{{ txn.sender.customer.user.username }}</td>  <!-- Updated this line -->
+                <td>{{ txn.receiver.customer.user.username }}</td>  <!-- Updated this line -->
+                <td>₹{{ txn.amount }}</td>
+                <td><span class="badge bg-{% if txn.status == 'SUCCESS' %}success{% else %}danger{% endif %}">{{ txn.status }}</span></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">No transactions yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
