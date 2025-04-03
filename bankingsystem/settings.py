@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 import environ
+import dj_database_url
 
 # Initialize environ
 env = environ.Env()
@@ -82,8 +83,15 @@ WSGI_APPLICATION = 'bankingsystem.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': env.db('DATABASE_URL', default='sqlite:///db.sqlite3')
+    'default': dj_database_url.config(
+        default='sqlite:///db.sqlite3',
+        conn_max_age=600
+    )
 }
+
+# Ensure SQLite database is created in a persistent location on Render
+if 'RENDER' in os.environ:
+    DATABASES['default']['NAME'] = os.path.join(BASE_DIR, 'db.sqlite3')
 
 
 # Password validation
@@ -153,3 +161,9 @@ if not DEBUG:
 # WhiteNoise Configuration
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Render specific settings
+if 'RENDER' in os.environ:
+    ALLOWED_HOSTS.append('*.onrender.com')
+    MIDDLEWARE.append('whitenoise.middleware.WhiteNoiseMiddleware')
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

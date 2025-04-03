@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: bank-management-system
+    env: python
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: gunicorn bankingsystem.wsgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.7
+      - key: DJANGO_SECRET_KEY
+        value: django-insecure-8x#v=6$q9#k4$m2$p5$n7$r3$t1$w9$y5$b7$d3$f1$h9$j5$l7$n3$p1$r9$t5$v7$x3$z1
+      - key: DJANGO_DEBUG
+        value: False
+      - key: DJANGO_ALLOWED_HOSTS
+        value: .onrender.com
+      - key: DATABASE_URL
+        value: sqlite:///db.sqlite3
+
+databases:
+  - name: bank-db
+    databaseName: bankdb
+    user: bankuser
+    plan: free 
