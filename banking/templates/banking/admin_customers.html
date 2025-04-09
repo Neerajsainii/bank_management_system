@@ -157,7 +157,7 @@
                                 {% for account in customer.accounts.all %}
                                 <tr>
                                     <td>{{ account.account_number }}</td>
-                                    <td>{{ account.get_account_type_display }}</td>
+                                    <td>{{ account.get_account_type_display() }}</td>
                                     <td>${{ account.balance }}</td>
                                 </tr>
                                 {% empty %}
@@ -182,7 +182,7 @@
                                 {% for loan in customer.loans.all %}
                                 <tr>
                                     <td>{{ loan.loan_id }}</td>
-                                    <td>{{ loan.get_loan_type_display }}</td>
+                                    <td>{{ loan.get_loan_type_display() }}</td>
                                     <td>${{ loan.amount }}</td>
                                     <td>
                                         {% if loan.status == 'P' %}

@@ -55,7 +55,7 @@
                     <tr>
                         <td>{{ account.account_number }}</td>
                         <td>{{ account.customer.user.first_name }} {{ account.customer.user.last_name }}</td>
-                        <td>{{ account.get_account_type_display }}</td>
+                        <td>{{ account.get_account_type_display() }}</td>
                         <td>${{ account.balance }}</td>
                         <td>{{ account.branch.name }}</td>
                         <td>
@@ -105,7 +105,7 @@
                             </tr>
                             <tr>
                                 <th>Type:</th>
-                                <td>{{ account.get_account_type_display }}</td>
+                                <td>{{ account.get_account_type_display() }}</td>
                             </tr>
                             <tr>
                                 <th>Balance:</th>
@@ -136,8 +136,8 @@
                             <tr>
                                 <th>Created By:</th>
                                 <td>
-                                    {% if account.created_by_employee %}
-                                    {{ account.created_by_employee.user.first_name }} {{ account.created_by_employee.user.last_name }}
+                                    {% if account.created_by %}
+                                    {{ account.created_by.user.first_name }} {{ account.created_by.user.last_name }}
                                     {% else %}
                                     System
                                     {% endif %}
@@ -182,7 +182,7 @@
                                 <th>Overdraft Limit:</th>
                                 <td>${{ account.currentaccount.overdraft_limit }}</td>
                             </tr>
-                            {% elif account.account_type == 'F' %}
+                            {% elif account.account_type == 'FD' %}
                             <tr>
                                 <th>Deposit Amount:</th>
                                 <td>${{ account.fixeddepositaccount.deposit_amount }}</td>
@@ -224,7 +224,7 @@
                             {% for transaction in account.transactions.all|slice:":5" %}
                             <tr>
                                 <td>{{ transaction.transaction_id }}</td>
-                                <td>{{ transaction.get_transaction_type_display }}</td>
+                                <td>{{ transaction.get_transaction_type_display() }}</td>
                                 <td>${{ transaction.amount }}</td>
                                 <td>{{ transaction.timestamp|date:"M d, Y H:i" }}</td>
                                 <td>{{ transaction.description|default:"N/A" }}</td>
