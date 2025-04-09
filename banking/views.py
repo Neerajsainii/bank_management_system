@@ -1,6 +1,7 @@
 from .utils import generate_loan_id
 from django.utils import timezone
-from decimal import Decimal, decimal
+from decimal import Decimal
+import decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
