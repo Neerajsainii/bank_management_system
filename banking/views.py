@@ -1,6 +1,6 @@
 from .utils import generate_loan_id
 from django.utils import timezone
-from decimal import Decimal
+from decimal import Decimal, decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
@@ -19,6 +19,7 @@ from .serializers import (
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.db import transaction
 
 # Custom permissions
 class IsAdmin(permissions.BasePermission):
@@ -340,49 +341,83 @@ def account_detail(request, account_number):
 
 @login_required
 def transfer_money(request):
-    # Get all accounts for the current user
-    try:
-        customer_accounts = Account.objects.filter(customer__user=request.user)
-    except Exception as e:
-        customer_accounts = []
-        messages.error(request, f"Error loading accounts: {str(e)}")
-
     if request.method == 'POST':
-        receiver_account_no = request.POST.get('receiver_account')
-        amount = Decimal(request.POST.get('amount'))
-        description = request.POST.get('description', '')
-
-        try:
-            sender_account = Account.objects.get(
-                account_number=request.POST.get('sender_account'),
-                customer__user=request.user
-            )
-            receiver_account = Account.objects.get(account_number=receiver_account_no)
-            
-            txn, msg = TransactionService.transfer(
-                sender_account,
-                receiver_account,
-                amount,
-                description
-            )
-            
-            if txn:
-                receiver_name = receiver_account.customer.user.get_full_name() or receiver_account.customer.user.username
-                messages.success(request, f"Success! ₹{amount} sent to {receiver_name}")
-            else:
-                messages.error(request, msg)
-            
-            return redirect('transfer_money')
+        from_account_number = request.POST.get('from_account')
+        to_account_number = request.POST.get('to_account')
+        amount = request.POST.get('amount')
         
+        try:
+            from_account = Account.objects.get(account_number=from_account_number)
+            to_account = Account.objects.get(account_number=to_account_number)
+            amount = Decimal(amount)
+            
+            # Check if user owns the from_account or is an employee
+            if not (request.user.is_staff or from_account.customer.user == request.user):
+                messages.error(request, 'You do not have permission to transfer from this account.')
+                return redirect('transfer_money')
+            
+            # Check if amount is positive
+            if amount <= 0:
+                messages.error(request, 'Amount must be positive.')
+                return redirect('transfer_money')
+            
+            # Check if from_account has sufficient balance
+            if from_account.balance < amount:
+                messages.error(request, 'Insufficient balance.')
+                return redirect('transfer_money')
+            
+            # Process the transfer within a transaction block to ensure atomicity
+            with transaction.atomic():
+                # Update balances
+                from_account.balance -= amount
+                to_account.balance += amount
+                
+                # Save the updated accounts
+                from_account.save()
+                to_account.save()
+                
+                # Create transaction records
+                Transaction.objects.create(
+                    account=from_account,
+                    transaction_type='W',
+                    amount=amount,
+                    description=f'Transfer to {to_account.account_number}',
+                    processed_by=request.user if request.user.is_staff else None
+                )
+                
+                Transaction.objects.create(
+                    account=to_account,
+                    transaction_type='D',
+                    amount=amount,
+                    description=f'Transfer from {from_account.account_number}',
+                    processed_by=request.user if request.user.is_staff else None
+                )
+                
+                messages.success(request, f'Successfully transferred ${amount} from {from_account.account_number} to {to_account.account_number}')
+                
         except Account.DoesNotExist:
-            messages.error(request, "Account not found!")
+            messages.error(request, 'One or both accounts do not exist.')
+        except (ValueError, decimal.InvalidOperation):
+            messages.error(request, 'Invalid amount format.')
         except Exception as e:
-            messages.error(request, f"Error: {str(e)}")
+            messages.error(request, f'An error occurred: {str(e)}')
+        
+        return redirect('transfer_money')
     
-    return render(request, 'banking/transfer_money.html', {
-        'accounts': customer_accounts,
-        'active_account': customer_accounts.first()  # Optional: preselect first account
-    })
+    # Get accounts for the form
+    if request.user.is_staff:
+        # For staff, show all accounts
+        accounts = Account.objects.all()
+    else:
+        # For customers, show only their accounts
+        try:
+            customer = Customer.objects.get(user=request.user)
+            accounts = Account.objects.filter(customer=customer)
+        except Customer.DoesNotExist:
+            accounts = []
+    
+    return render(request, 'banking/transfer_money.html', {'accounts': accounts})
+
 @login_required
 def transactions(request):
     try:
@@ -909,16 +944,79 @@ def employee_accounts(request):
 
 @login_required
 def employee_transactions(request):
-    if not hasattr(request.user, 'employee'):
-        messages.error(request, "You don't have permission to access this page.")
+    # Check if user is an employee
+    try:
+        employee = Employee.objects.get(user=request.user)
+        branch = employee.branch
+    except Employee.DoesNotExist:
+        messages.error(request, 'You do not have permission to access this page.')
         return redirect('home')
     
-    employee = request.user.employee
-    transactions = Transaction.objects.filter(account__branch=employee.branch).order_by('-timestamp')
+    if request.method == 'POST':
+        account_id = request.POST.get('account_id')
+        transaction_type = request.POST.get('transaction_type')
+        amount = request.POST.get('amount')
+        description = request.POST.get('description', '')
+        
+        try:
+            account = Account.objects.get(id=account_id)
+            amount = Decimal(amount)
+            
+            # Check if amount is positive
+            if amount <= 0:
+                messages.error(request, 'Amount must be positive.')
+                return redirect('employee_transactions')
+            
+            # Process the transaction within a transaction block to ensure atomicity
+            with transaction.atomic():
+                if transaction_type == 'D':  # Deposit
+                    account.balance += amount
+                    account.save()
+                    
+                    Transaction.objects.create(
+                        account=account,
+                        transaction_type='D',
+                        amount=amount,
+                        description=description or 'Deposit',
+                        processed_by=request.user
+                    )
+                    
+                    messages.success(request, f'Successfully deposited ${amount} to account {account.account_number}')
+                    
+                elif transaction_type == 'W':  # Withdrawal
+                    # Check if account has sufficient balance
+                    if account.balance < amount:
+                        messages.error(request, 'Insufficient balance.')
+                        return redirect('employee_transactions')
+                    
+                    account.balance -= amount
+                    account.save()
+                    
+                    Transaction.objects.create(
+                        account=account,
+                        transaction_type='W',
+                        amount=amount,
+                        description=description or 'Withdrawal',
+                        processed_by=request.user
+                    )
+                    
+                    messages.success(request, f'Successfully withdrew ${amount} from account {account.account_number}')
+                
+        except Account.DoesNotExist:
+            messages.error(request, 'Account does not exist.')
+        except (ValueError, decimal.InvalidOperation):
+            messages.error(request, 'Invalid amount format.')
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+        
+        return redirect('employee_transactions')
+    
+    # Get transactions for the branch
+    transactions = Transaction.objects.filter(account__branch=branch).order_by('-timestamp')
     
     context = {
         'employee': employee,
-        'transactions': transactions
+        'transactions': transactions,
     }
     
     return render(request, 'banking/employee_transactions.html', context)

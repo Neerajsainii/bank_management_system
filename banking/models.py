@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from .utils import generate_transaction_id
+from django.core.exceptions import ValidationError
 
 class Branch(models.Model):
     name = models.CharField(max_length=100)
@@ -63,21 +64,48 @@ class Account(models.Model):
     ACCOUNT_TYPES = (
         ('S', 'Savings'),
         ('C', 'Current'),
-        ('F', 'Fixed Deposit'),
+        ('FD', 'Fixed Deposit'),
     )
     
     account_number = models.CharField(max_length=20, unique=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='accounts')
-    account_type = models.CharField(max_length=1, choices=ACCOUNT_TYPES)
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='accounts')
+    account_type = models.CharField(max_length=2, choices=ACCOUNT_TYPES)
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField(default=True)
     interest_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, related_name='accounts')
-    created_by_employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_accounts')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='created_accounts')
+    
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(balance__gte=0),
+                name='balance_non_negative'
+            ),
+            models.CheckConstraint(
+                check=models.Q(interest_rate__gte=0),
+                name='interest_rate_non_negative'
+            )
+        ]
     
     def __str__(self):
-        return f"{self.account_number} - {self.customer}"
+        return f"{self.account_number} - {self.get_account_type_display()}"
+    
+    def clean(self):
+        # Additional validation beyond database constraints
+        if self.balance < 0:
+            raise ValidationError('Account balance cannot be negative.')
+        
+        if self.account_type == 'S' and hasattr(self, 'savingsaccount'):
+            # For savings accounts, ensure balance >= min_balance
+            savings = self.savingsaccount
+            if self.balance < savings.min_balance:
+                raise ValidationError(f'Savings account balance must be at least {savings.min_balance}.')
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
 class SavingsAccount(models.Model):
     account = models.OneToOneField(Account, on_delete=models.CASCADE, primary_key=True)
@@ -119,25 +147,42 @@ class Transaction(models.Model):
     TRANSACTION_TYPES = (
         ('D', 'Deposit'),
         ('W', 'Withdrawal'),
-        ('T', 'Transfer'),  # For user-to-user transfers
-        ('P', 'Payment'),   # For merchant/UPI-like payments
+        ('T', 'Transfer'),
     )
-
-    transaction_id = models.CharField(max_length=20, unique=True, default=generate_transaction_id)  # Custom ID generator
-    sender = models.ForeignKey(Account, on_delete=models.CASCADE, null=True, related_name='sent_transactions')  # Renamed from 'account'
-    receiver = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True, blank=True, related_name='received_transactions')  # Renamed from 'destination_account'
+    
+    transaction_id = models.CharField(max_length=20, unique=True, default=generate_transaction_id)
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='transactions')
     transaction_type = models.CharField(max_length=1, choices=TRANSACTION_TYPES)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     timestamp = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=10, choices=[('PENDING', 'Pending'), ('SUCCESS', 'Success'), ('FAILED', 'Failed')], default='PENDING')  # New field
-    description = models.TextField(blank=True, null=True)
-    upi_id = models.CharField(max_length=50, blank=True, null=True, help_text="UPI ID for payment requests")  # Optional for UPI-like feature
+    description = models.CharField(max_length=200, blank=True)
+    processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_transactions')
+    
+    class Meta:
+        ordering = ['-timestamp']
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(amount__gt=0),
+                name='transaction_amount_positive'
+            )
+        ]
     
     def __str__(self):
-        sender_name = self.sender.customer.user.username if self.sender else 'System'
-        receiver_name = self.receiver.customer.user.username if self.receiver else 'System'
-        return f"{self.transaction_id} - {sender_name} → {receiver_name} - ₹{self.amount}"
+        return f"{self.transaction_id} - {self.get_transaction_type_display()} - {self.amount}"
     
+    def clean(self):
+        # Validate transaction amount is positive
+        if self.amount <= 0:
+            raise ValidationError('Transaction amount must be positive.')
+        
+        # Validate withdrawal doesn't exceed balance
+        if self.transaction_type == 'W' and self.account.balance < self.amount:
+            raise ValidationError('Insufficient balance for this withdrawal.')
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
 class Loan(models.Model):
     LOAN_TYPES = (
         ('P', 'Personal'),
